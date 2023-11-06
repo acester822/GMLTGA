@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     image: grafana/agent:v0.37.2
     volumes:
-      - ../config/agent-flow:/etc/agent-config
+      - ./config/agent-flow:/etc/agent-config
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint:
       - /bin/grafana-agent
