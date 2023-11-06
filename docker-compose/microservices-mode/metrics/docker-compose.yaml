@@ -32,6 +32,9 @@ services:
       - "9001:9001"
 
   agent:
+    depends_on:
+      gateway:
+        condition: service_healthy
     image: grafana/agent:v0.37.2
     volumes:
       - ../config/agent-flow:/etc/agent-config
@@ -60,6 +63,9 @@ services:
           - grafana-agent-cluster
 
   load-mimir-rules:
+    depends_on:
+      gateway:
+        condition: service_started
     image: grafana/mimirtool:2.10.0
     volumes:
       - ../../../monitoring-mixins/mimir-mixin/deploy/rules.yaml:/mimir-mixin/rules.yaml
@@ -71,6 +77,11 @@ services:
       rules load /mimir-mixin/rules.yaml /mimir-mixin/alerts.yaml          
 
   gateway:
+    depends_on:
+      distributor:
+        condition: service_healthy
+      ruler:
+        condition: service_healthy
     image: nginxinc/nginx-unprivileged:1.25-alpine
     volumes:
       - ../../common/config/nginx:/etc/nginx/templates
@@ -91,6 +102,9 @@ services:
       - "8080"
 
   distributor:
+    depends_on:
+      ingester:
+        condition: service_started
     image: &mimirImage grafana/mimir:2.10.3
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -98,6 +112,7 @@ services:
     command:
       - -config.file=/etc/mimir.yaml
       - -target=distributor
+#      - -log.level=warn
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ready || exit 1" ]
       interval: 10s
@@ -120,6 +135,9 @@ services:
       - -target=overrides-exporter
 
   querier:
+    depends_on:
+      query-scheduler:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -136,6 +154,9 @@ services:
           - mimir-memberlist
 
   query-frontend:
+    depends_on:
+      query-scheduler:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -162,6 +183,9 @@ services:
       replicas: 2
 
   ruler:
+    depends_on:
+      minio:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -180,6 +204,9 @@ services:
           - mimir-memberlist
 
   alertmanager:
+    depends_on:
+      minio:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -193,6 +220,9 @@ services:
           - mimir-memberlist
 
   compactor:
+    depends_on:
+      minio:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -206,6 +236,9 @@ services:
           - mimir-memberlist
 
   ingester:
+    depends_on:
+      minio:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
@@ -223,6 +256,9 @@ services:
           - mimir-memberlist
 
   store-gateway:
+    depends_on:
+      minio:
+        condition: service_healthy
     image: *mimirImage
     volumes:
       - ../../common/config/mimir/microservices-mode-metrics.yaml:/etc/mimir.yaml # Note: Mimir use microservices-mode-metrics.yaml
